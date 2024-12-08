@@ -1,0 +1,1210 @@
+---
+title: "678 Final Project"
+author: "Paul Moon"
+format: pdf
+editor: visual
+---
+
+## Abstract
+
+In the movie Moneyball, ‘Brad Pitt’ uses pure statistics to select which MLB players should play for the Athletics, disregarding what other teams and analysts say about their skill based on other parameters, such as “looks or personality.” He used on-base percentage (OBP) and slugging percentage with the main goal of “getting on base” because “getting on base” meant “runs” and the more “runs” you score, the higher the chances of winning was.
+
+In my final project, my goal is to do something similar but with the NBA. The NBA mainly consists of 3 statistics: points, rebounds, and assists (PRAs). First, I will find the average PRAs a playoff NBA team records throughout an entire 82-game season and compare it to an NBA team that does not make the playoffs. That will be the basis of our project. Find players who will get you the amount of PRAs you need to reach the playoffs.
+
+In addition to PRAs, I will also be looking into Field Goals Made (FGM), Field Goals Attempted (FGA), and 3-Point Statistics. The reason for this comes from Wayne 'The Great One' Gretzky's quote "You miss 100% of the shots you don't take." I believe that the more shots a player attempts, the more likely they will score more points, resulting in more wins.
+
+Finally, I will be looking into Games Started (GS) and Minutes Played (MIN) due to the fact that you want to draft/trade for players who know how to stay healthy and are less prone to injury.
+
+The goal is to look at statistics of the past 3 years: the 2021-22, 2022-23, and 2023-24 NBA Seasons. This is due to the fact that the 2019-20 NBA Season was cut short due to Covid-19 and the 2020-21 NBA Season only had 72 instead of the regular 82 games due to the same reason. Most importantly, the new playoff format was updated in the 2020-21 NBA Season with the introduction of the play-in tournament.
+
+## Introduction
+
+With the introduction of the play-in tournament, after the conclusion of the 82 game season, 6 teams per conference (total of 12 teams) will automatically make the playoffs. In addition to that, 4 more teams per conference (total of 8 teams) will have the opportunity to still make it into the playoffs following this format:
+
+![](images/Screenshot%202024-12-08%20011411.png)
+
+1\*
+
+Data of both play-in tournament requirements and playoff requirements will be analyzed in this section; however, in this project, I would like to only look at the number of wins required to automatically make it into the playoffs without having to go through the play-in tournament (top 6 seed in the conference). The reason being that the play-in tournament is a "best of 1" series. Due to the fact that one game, one off day can eliminate a team from the playoffs, it is not sufficient to only be a play-in tournament team.
+
+#### 2021-22
+
+![](images/Eastern%20Conference%202021-22.png)
+
+![](images/Western%20Conference%202021-22.png)
+
+2\*
+
+In the 2021-2022 NBA Season, if you were in the Eastern Conference, a team needed 38 wins to qualify for the play-in tournament. To instantly qualify for the playoffs, a team needed 45 wins. However, in the Western Conference, a team needed only 34 wins to qualify for the play-in tournament; however, a team needed 47 wins to instantly qualify for the playoffs.
+
+After the conclusion of the play-in tournament, playoff qualifying teams passed the average threshold of 44 wins in the Eastern Conference and 39 wins in the Western Conference (The average threshold was found by averaging the lowest playoff team to the highest non-playoff team).
+
+#### 2022-23
+
+![](images/Eastern%20Conference%202022-23.png)
+
+![](images/Western%20Conference%202022-23.png)
+
+3\*
+
+In the 2022-2023 NBA Season, if you were in the Eastern Conference, a team needed 36 wins to qualify for the play-in tournament. To instantly qualify for the playoffs, a team needed 45 wins. In the Western Conference, a team needed 39 wins to qualify for the play-in tournament and 44 wins to instantly qualify for the playoffs.
+
+After the conclusion of the play-in tournament, playoff qualifying teams passed the average threshold of 41 wins in the Eastern Conference and 42 wins in the Western Conference.
+
+#### 2023-24
+
+![](images/Eastern%20Conference%202023-24.png)
+
+![](images/Western%20Conference%202023-24.png)
+
+4\*
+
+In the 2022-2023 NBA Season, if you were in the Eastern Conference, a team needed 33 wins to qualify for the play-in tournament. To instantly qualify for the playoffs, a team needed 47 wins. In the Western Conference, a team needed 42 wins to qualify for the play-in tournament and 48 wins to instantly qualify for the playoffs.
+
+After the conclusion of the play-in tournament, playoff qualifying teams passed the average threshold of 40 wins in the Eastern Conference and 47 wins in the Western Conference.
+
+To summarize, Eastern Conference teams needed 38, 36, 33 wins to make the play-in tournament and the Western Conference teams needed 34, 39, and 42 wins to make the play-in tournament in 2022, 2023, and 2024 respectively.
+
+According to NBA play-in tournament Wikipedia (5\*), the average number of wins required to secure the 10th seed typically falls between 38 and 42 wins. For a more detailed breakdown, The Eastern Conference is historically less competitive, requiring around 38-40 wins whereas the more competitive Western Conference requires around 40-42 wins.
+
+Combining this information with the data that we have, let's set the weight of each of these 50/50 (csv data and online data), the "magic" number that NBA teams are trying to reach to secure a spot in the play-in tournament league-wide will be set to 39.
+
+In order to secure a NBA playoff spot without having to go into the play-in tournament, in previous years, Eastern Conference teams needed 45, 45, 47 wins and the Western Conference teams needed 47, 44, 48 wins in 2022, 2023, 2024 respectively.
+
+According to the NBA's official website (6\*), the Eastern Conference requires around 42-45 wins and the Western Conference requires around 44-47 wins to achieve this feat, with the league average being around 45 wins.
+
+Again, combining our csv data and online data, the "magic" number that NBA teams are trying to reach to secure a top 6 spot to go straight into the playoffs will be set to 46.
+
+Therefore, for this project, the EDA and Modeling will all revolve around achieving one single number:
+
+**46 wins**
+
+## EDA
+
+In our EDA, we will visualize the data to see if anything catches our eye before we dive into the Modeling section. We will be combining and looking at all 3 years of data.
+
+```{r, echo = FALSE, include = FALSE}
+#this is where all the libraries will be stored
+library(data.table)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r,echo = FALSE}
+# Load datasets
+data_2021_22 <- read.csv("NBA Season Player Statistics - 2021-22.csv")
+data_2022_23 <- read.csv("NBA Season Player Statistics - 2022-23.csv")
+data_2023_24 <- read.csv("NBA Season Player Statistics - 2023-24.csv")
+
+# Combined dataset
+all_data <- bind_rows(
+  data_2021_22 %>% mutate(Year = "2021-22"),
+  data_2022_23 %>% mutate(Year = "2022-23"),
+  data_2023_24 %>% mutate(Year = "2023-24")
+)
+```
+
+```{r, echo = FALSE}
+# Filter centers
+centers_2021_22 <- data_2021_22 %>% filter(Position == "C")
+centers_2022_23 <- data_2022_23 %>% filter(Position == "C")
+centers_2023_24 <- data_2023_24 %>% filter(Position == "C")
+
+# Combine all Centers into one dataset
+all_centers <- bind_rows(centers_2021_22, centers_2022_23, centers_2023_24)
+
+# Save to a CSV file
+write.csv(all_centers, "all_centers_combined.csv", row.names = FALSE)
+```
+
+```{r, echo = FALSE}
+# Filter power forwards
+pfs_2021_22 <- data_2021_22 %>% filter(Position == "PF")
+pfs_2022_23 <- data_2022_23 %>% filter(Position == "PF")
+pfs_2023_24 <- data_2023_24 %>% filter(Position == "PF")
+
+# Combine all power forwards into one dataset
+all_pfs <- bind_rows(pfs_2021_22, pfs_2022_23, pfs_2023_24)
+
+# Save to a CSV file
+write.csv(all_pfs, "all_pfs_combined.csv", row.names = FALSE)
+```
+
+```{r, echo = FALSE}
+# Filter small forwards
+sfs_2021_22 <- data_2021_22 %>% filter(Position == "SF")
+sfs_2022_23 <- data_2022_23 %>% filter(Position == "SF")
+sfs_2023_24 <- data_2023_24 %>% filter(Position == "SF")
+
+# Combine all small forwardss into one dataset
+all_sfs <- bind_rows(sfs_2021_22, sfs_2022_23, sfs_2023_24)
+
+# Save to a CSV file
+write.csv(all_sfs, "all_sfs_combined.csv", row.names = FALSE)
+```
+
+```{r, echo = FALSE}
+# Filter point guards
+pgs_2021_22 <- data_2021_22 %>% filter(Position == "PG")
+pgs_2022_23 <- data_2022_23 %>% filter(Position == "PG")
+pgs_2023_24 <- data_2023_24 %>% filter(Position == "PG")
+
+# Combine all point guards into one dataset
+all_pgs <- bind_rows(pgs_2021_22, pgs_2022_23, pgs_2023_24)
+
+# Save to a CSV file
+write.csv(all_pgs, "all_pgs_combined.csv", row.names = FALSE)
+```
+
+```{r, echo = FALSE}
+# Filter shooting guards
+sgs_2021_22 <- data_2021_22 %>% filter(Position == "SG")
+sgs_2022_23 <- data_2022_23 %>% filter(Position == "SG")
+sgs_2023_24 <- data_2023_24 %>% filter(Position == "SG")
+
+# Combine all shooting guards into one dataset
+all_sgs <- bind_rows(sgs_2021_22, sgs_2022_23, sgs_2023_24)
+
+# Save to a CSV file
+write.csv(all_sgs, "all_sgs_combined.csv", row.names = FALSE)
+```
+
+### PRAs
+
+#### Playoff vs Non-Playoffs
+
+We will first look to see if PRA averages between playoff clinching players vs players who did not clinch the playoffs differ.
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_centers <- bind_rows(
+  centers_2021_22 %>% mutate(Year = "2021-22"),
+  centers_2022_23 %>% mutate(Year = "2022-23"),
+  centers_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_centers %>%
+  select(Player, Team, Playoff, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Centers' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_pfs <- bind_rows(
+  pfs_2021_22 %>% mutate(Year = "2021-22"),
+  pfs_2022_23 %>% mutate(Year = "2022-23"),
+  pfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_pfs %>%
+  select(Player, Team, Playoff, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Power Forwards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_sfs <- bind_rows(
+  sfs_2021_22 %>% mutate(Year = "2021-22"),
+  sfs_2022_23 %>% mutate(Year = "2022-23"),
+  sfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_sfs %>%
+  select(Player, Team, Playoff, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Small Forwards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_pgs <- bind_rows(
+  pgs_2021_22 %>% mutate(Year = "2021-22"),
+  pgs_2022_23 %>% mutate(Year = "2022-23"),
+  pgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_pgs %>%
+  select(Player, Team, Playoff, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Point Guards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_sgs <- bind_rows(
+  sgs_2021_22 %>% mutate(Year = "2021-22"),
+  sgs_2022_23 %>% mutate(Year = "2022-23"),
+  sgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_sgs %>%
+  select(Player, Team, Playoff, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Shooting Guards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+Looking at the data, the green and red dots seem to be scattered "randomly" with only some of the apex dots (players) being green. If playoff teams were "better" than non-playoff teams, then we would expect to see more green dots at the top and the red dots at the bottom. Maybe players on teams that are close to making the playoffs are the red dots at the top; therefore, let's do the same plots again but with play-in tournament players shown in blue.
+
+#### Playoffs vs Play-Ins vs Non-Playoffs
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_centers <- bind_rows(
+  centers_2021_22 %>% mutate(Year = "2021-22"),
+  centers_2022_23 %>% mutate(Year = "2022-23"),
+  centers_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_centers %>%
+  select(Player, Team, Status, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Centers' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_pfs <- bind_rows(
+  pfs_2021_22 %>% mutate(Year = "2021-22"),
+  pfs_2022_23 %>% mutate(Year = "2022-23"),
+  pfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_pfs %>%
+  select(Player, Team, Status, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Power Forwards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_sfs <- bind_rows(
+  sfs_2021_22 %>% mutate(Year = "2021-22"),
+  sfs_2022_23 %>% mutate(Year = "2022-23"),
+  sfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_sfs %>%
+  select(Player, Team, Status, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Small Forwards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_pgs <- bind_rows(
+  pgs_2021_22 %>% mutate(Year = "2021-22"),
+  pgs_2022_23 %>% mutate(Year = "2022-23"),
+  pgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_pgs %>%
+  select(Player, Team, Status, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Point Guards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_sgs <- bind_rows(
+  sgs_2021_22 %>% mutate(Year = "2021-22"),
+  sgs_2022_23 %>% mutate(Year = "2022-23"),
+  sgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_sgs %>%
+  select(Player, Team, Status, PPG, RPG, APG) %>%
+  pivot_longer(cols = c(PPG, RPG, APG), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("PPG", "RPG", "APG"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Shooting Guards' PRAs",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+Based on these dot plots, we can see that there are fewer red dots near the top. It is mostly filled with green and blue dots, which is what we are aiming for.
+
+#### Conclusion
+
+It seems as if RPGs, more specifically APGs, are not as important as PPGs due to the low amount players record in general. However, it is important to notice that certain positions will be recording higher counts of either PPGs, RPGs, or APGs more than other positions simply due to the play-style of the game. Therefore, this is something that we will be looking at in the Modeling section.
+
+### Shooting
+
+#### Playoff vs Non-Playoffs
+
+Now, let's see if we see differences in shooting in playoffs vs non-playoffs teams.
+
+I have two predictions:
+
+-   "Better" teams will have players with higher shooting percentages. In this case, it will be more green dots near the top of FGM and X3PM but lower in FGA and X3PA
+
+-   "Better" teams will have players with higher FGM, FGA, X3PM, and X3PA due to the fact that these players are creating more shooting opportunities and thus with normal shooting percentages, are scoring more.
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_centers <- bind_rows(
+  centers_2021_22 %>% mutate(Year = "2021-22"),
+  centers_2022_23 %>% mutate(Year = "2022-23"),
+  centers_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_centers %>%
+  select(Player, Team, Playoff, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Centers' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_pfs <- bind_rows(
+  pfs_2021_22 %>% mutate(Year = "2021-22"),
+  pfs_2022_23 %>% mutate(Year = "2022-23"),
+  pfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_pfs %>%
+  select(Player, Team, Playoff, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Power Forwards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_sfs <- bind_rows(
+  sfs_2021_22 %>% mutate(Year = "2021-22"),
+  sfs_2022_23 %>% mutate(Year = "2022-23"),
+  sfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_sfs %>%
+  select(Player, Team, Playoff, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Small Forwards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_pgs <- bind_rows(
+  pgs_2021_22 %>% mutate(Year = "2021-22"),
+  pgs_2022_23 %>% mutate(Year = "2022-23"),
+  pgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_pgs %>%
+  select(Player, Team, Playoff, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Point Guards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_sgs <- bind_rows(
+  sgs_2021_22 %>% mutate(Year = "2021-22"),
+  sgs_2022_23 %>% mutate(Year = "2022-23"),
+  sgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_sgs %>%
+  select(Player, Team, Playoff, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Shooting Guards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+Again, for a clearer visual, let's try adding in the play-in teams to see if the higher red dots in the dot plots are from teams who are close to making the playoffs.
+
+#### Playoffs vs Play-Ins vs Non-Playoffs
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_centers <- bind_rows(
+  centers_2021_22 %>% mutate(Year = "2021-22"),
+  centers_2022_23 %>% mutate(Year = "2022-23"),
+  centers_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_centers %>%
+  select(Player, Team, Status, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Centers' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_pfs <- bind_rows(
+  pfs_2021_22 %>% mutate(Year = "2021-22"),
+  pfs_2022_23 %>% mutate(Year = "2022-23"),
+  pfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_pfs %>%
+  select(Player, Team, Status, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Power Forwards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_sfs <- bind_rows(
+  sfs_2021_22 %>% mutate(Year = "2021-22"),
+  sfs_2022_23 %>% mutate(Year = "2022-23"),
+  sfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_sfs %>%
+  select(Player, Team, Status, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Small Forwards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_pgs <- bind_rows(
+  pgs_2021_22 %>% mutate(Year = "2021-22"),
+  pgs_2022_23 %>% mutate(Year = "2022-23"),
+  pgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_pgs %>%
+  select(Player, Team, Status, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Point Guards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_sgs <- bind_rows(
+  sgs_2021_22 %>% mutate(Year = "2021-22"),
+  sgs_2022_23 %>% mutate(Year = "2022-23"),
+  sgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_sgs %>%
+  select(Player, Team, Status, FGM, FGA, X3PM, X3PA) %>%
+  pivot_longer(cols = c(FGM, FGA, X3PM, X3PA), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("FGM", "FGA", "X3PM", "X3PA"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Shooting Guards' Shooting",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+#### Conclusion
+
+It seems like my second prediction was more accurate. Based on the plots on the dot plot, we can see that in both sections (FGM and FGA), we can clearly see more greens and blues at the top. However, when it comes to three pointers, there was not really a big difference between playoffs and non-playoffs teams. This might be due to the fact that some teams have players who are just better long range shooters or are known for their long range shot, like Stephen Curry, and some teams aren't.
+
+### Health
+
+#### Playoff vs Non-Playoffs
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_centers <- bind_rows(
+  centers_2021_22 %>% mutate(Year = "2021-22"),
+  centers_2022_23 %>% mutate(Year = "2022-23"),
+  centers_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_centers %>%
+  select(Player, Team, Playoff, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Centers' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+#### Playoffs vs Play-Ins vs Non-Playoffs
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_centers <- bind_rows(
+  centers_2021_22 %>% mutate(Year = "2021-22"),
+  centers_2022_23 %>% mutate(Year = "2022-23"),
+  centers_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_centers %>%
+  select(Player, Team, Status, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Centers' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+#### Conclusion
+
+## Modeling
+
+## Conclusion
+
+## References
+
+1\* - <https://www.nba.com/news/nba-play-in-tournament>
+
+2\* - <https://www.espn.com/nba/standings/_/season/2022>
+
+3\* - <https://www.espn.com/nba/standings/_/season/2023>
+
+4\* - <https://www.espn.com/nba/standings/_/season/2024>
+
+5\* - <https://en.wikipedia.org/wiki/NBA_play-in_tournament?utm_source=chatgpt.com>
+
+6\* - <https://www.nba.com/news/playoff-primer-seeding-matchup-postseason-history-all-16-teams>
+
+The websites I used to create my csv files are:
+
+<https://www.nbastuffer.com/nba-stats/player/>
+
+<https://www.statmuse.com/>
+
+<https://www.basketball-reference.com/teams/>
