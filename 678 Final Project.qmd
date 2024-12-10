@@ -25,7 +25,7 @@ With the introduction of the play-in tournament, after the conclusion of the 82 
 
 1\*
 
-Data of both play-in tournament requirements and playoff requirements will be analyzed in this section; however, in this project, I would like to only look at the number of wins required to automatically make it into the playoffs without having to go through the play-in tournament (top 6 seed in the conference). The reason being that the play-in tournament is a "best of 1" series. Due to the fact that one game, one off day can eliminate a team from the playoffs, it is not sufficient to only be a play-in tournament team.
+Data of both play-in tournament requirements and playoff requirements will be analyzed in this section; however, in this project, I will calculate the playoff scenario where play-in tournament teams have a 50% chance in making the playoffs. This makes sense since every year there are 8 play-in tournament teams and only 4 teams make it into the playoffs.
 
 #### 2021-22
 
@@ -75,13 +75,13 @@ According to the NBA's official website (6\*), the Eastern Conference requires a
 
 Again, combining our csv data and online data, the "magic" number that NBA teams are trying to reach to secure a top 6 spot to go straight into the playoffs will be set to 46.
 
-Therefore, for this project, the EDA and Modeling will all revolve around achieving one single number:
+Combining the 50% chance that teams have in making the playoffs after qualifying for the play-in tournament, this project: the EDA and Modeling will revolve around achieving one single number:
 
-**46 wins**
+**43 wins**
 
 ## EDA
 
-In our EDA, we will visualize the data to see if anything catches our eye before we dive into the Modeling section. We will be combining and looking at all 3 years of data.
+In our EDA, we will visualize the data to see if anything catches our eyes before we dive into the Modeling section. We will be combining and looking at all 3 years of data.
 
 ```{r, echo = FALSE, include = FALSE}
 #this is where all the libraries will be stored
@@ -90,6 +90,7 @@ library(tidyverse)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(lme4)
 ```
 
 ```{r,echo = FALSE}
@@ -625,13 +626,13 @@ Based on these dot plots, we can see that there are fewer red dots near the top.
 
 #### Conclusion
 
-It seems as if RPGs, more specifically APGs, are not as important as PPGs due to the low amount players record in general. However, it is important to notice that certain positions will be recording higher counts of either PPGs, RPGs, or APGs more than other positions simply due to the play-style of the game. Therefore, this is something that we will be looking at in the Modeling section.
+It seems as if RPGs, more specifically APGs, are not as important as PPGs due to the low amount players record in general. However, it is important to notice that certain positions will be recording higher counts of either PPGs, RPGs, or APGs than other positions simply due to the play-style of the game. Therefore, this is something that we will be looking at in the Modeling section.
 
 ### Shooting
 
 #### Playoff vs Non-Playoffs
 
-Now, let's see if we see differences in shooting in playoffs vs non-playoffs teams.
+Now, let's see if we see differences in shooting within playoffs vs non-playoffs teams.
 
 I have two predictions:
 
@@ -1085,11 +1086,17 @@ ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
 
 #### Conclusion
 
-It seems like my second prediction was more accurate. Based on the plots on the dot plot, we can see that in both sections (FGM and FGA), we can clearly see more greens and blues at the top. However, when it comes to three pointers, there was not really a big difference between playoffs and non-playoffs teams. This might be due to the fact that some teams have players who are just better long range shooters or are known for their long range shot, like Stephen Curry, and some teams aren't.
+It seems like my second prediction was more accurate. Based on the dot plot, we can see that in both sections (FGM and FGA), there are more greens and blues at the top. However, when it comes to three pointers, there was not really a big difference between playoffs and non-playoffs teams. This might be due to the fact that some teams have players who are just better long range shooters or are known for their long range shot, like Stephen Curry, and some teams aren't.
 
 ### Health
 
+Now, when drafting or trading for a player, it is very important to assess their health. Are they injury prone? Have they missed numerous games due to illnesses or other personal issues? Usually, when a player is good enough to be a starter, they will stay a starter whenever they are in good condition. When players are considered "active" for the game, but start on the bench, it means that there is something wrong with the player. Therefore, we will look at players' games started (GS) and minutes played (MIN) in order to see how much they will be able to contribute to the team during the season.
+
 #### Playoff vs Non-Playoffs
+
+First, we will look at the just playoff teams vs non-playoff teams with play-in qualifying teams being considered non-playoff teams like before.
+
+My prediction is that "better" teams will have players who are not injury prone (GS) and have better stamina (MIN).
 
 ```{r, echo = FALSE}
 # Add Playoff column to classify players
@@ -1132,7 +1139,173 @@ ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
   )
 ```
 
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_pfs <- bind_rows(
+  pfs_2021_22 %>% mutate(Year = "2021-22"),
+  pfs_2022_23 %>% mutate(Year = "2022-23"),
+  pfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_pfs %>%
+  select(Player, Team, Playoff, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Power Forwards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_sfs <- bind_rows(
+  sfs_2021_22 %>% mutate(Year = "2021-22"),
+  sfs_2022_23 %>% mutate(Year = "2022-23"),
+  sfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_sfs %>%
+  select(Player, Team, Playoff, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Small Forwards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_pgs <- bind_rows(
+  pgs_2021_22 %>% mutate(Year = "2021-22"),
+  pgs_2022_23 %>% mutate(Year = "2022-23"),
+  pgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_pgs %>%
+  select(Player, Team, Playoff, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Point Guards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff column to classify players
+all_sgs <- bind_rows(
+  sgs_2021_22 %>% mutate(Year = "2021-22"),
+  sgs_2022_23 %>% mutate(Year = "2022-23"),
+  sgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Playoff = case_when(
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Select only relevant columns and reshape
+selected_data <- all_sgs %>%
+  select(Player, Team, Playoff, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Playoff)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Shooting Guards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Playoff Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
 #### Playoffs vs Play-Ins vs Non-Playoffs
+
+Now, let us look at when play-in teams are differentiated.
 
 ```{r, echo = FALSE}
 # Add Playoff and Play-In classification
@@ -1181,11 +1354,874 @@ ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
   )
 ```
 
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_pfs <- bind_rows(
+  pfs_2021_22 %>% mutate(Year = "2021-22"),
+  pfs_2022_23 %>% mutate(Year = "2022-23"),
+  pfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_pfs %>%
+  select(Player, Team, Status, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Power Forwards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_sfs <- bind_rows(
+  sfs_2021_22 %>% mutate(Year = "2021-22"),
+  sfs_2022_23 %>% mutate(Year = "2022-23"),
+  sfs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_sfs %>%
+  select(Player, Team, Status, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Small Forwards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_pgs <- bind_rows(
+  pgs_2021_22 %>% mutate(Year = "2021-22"),
+  pgs_2022_23 %>% mutate(Year = "2022-23"),
+  pgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_pgs %>%
+  select(Player, Team, Status, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Point Guards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
+```{r, echo = FALSE}
+# Add Playoff and Play-In classification
+all_sgs <- bind_rows(
+  sgs_2021_22 %>% mutate(Year = "2021-22"),
+  sgs_2022_23 %>% mutate(Year = "2022-23"),
+  sgs_2023_24 %>% mutate(Year = "2023-24")
+) %>%
+  mutate(
+    Status = case_when(
+      # Playoff teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Reshape data for plotting
+selected_data <- all_sgs %>%
+  select(Player, Team, Status, GS, MIN) %>%
+  pivot_longer(cols = c(GS, MIN), 
+               names_to = "Statistic", 
+               values_to = "Value") %>%
+  mutate(Statistic = factor(Statistic, levels = c("GS", "MIN"))) # Ensure correct order
+
+# Create the dot plot
+ggplot(selected_data, aes(x = Statistic, y = Value, color = Status)) +
+  geom_jitter(alpha = 0.7, size = 3, width = 0.2) + # Add jitter for better visibility
+  scale_color_manual(values = c("Playoff" = "green", "Play-In" = "blue", "Non-Playoff" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Performance of Shooting Guards' Health",
+    x = "Statistic",
+    y = "Value",
+    color = "Team Status"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 12), 
+    axis.title = element_text(size = 14)
+  )
+```
+
 #### Conclusion
+
+It's clear in both dot plots that in the amount of games started, playoff teams had players who started most, if not all 82, games of the season. Other than some outliers, my initial prediction was correct. However, for the number of minutes a player plays during the game, it seems as if there was no correlation between playoff teams and non-playoff teams. The reason for this could be the fact that players on both "good" and "bad" teams are still playing all 48 minutes of the game.
 
 ## Modeling
 
+We now have an idea of what teams have to do in order to secure a playoff spot. However, just eyeballing our data is not good enough for scouts to use and pick out specific players to draft or trade, especially with all the scattered range in our dot plots. Therefore, we will do three different models: the Null Model, Linear Model, and Multilinear Model. Within each of these models, we will do: Complete Pooling, No Pooling, and Partial Pooling.
+
+As for the predictors from the EDA, we have decided to only test: GS, PPG, RPG, and APG. We already established that MIN, 3PM, and 3PA are not really important and for FGM and FGA, we decided not to use this since more shots and more field goals will directly translate to PPG, RPG, and APG.
+
+```{r, echo = FALSE}
+# Categorize teams into Playoff, Play-In, and Non-Playoff groups
+all_data <- all_data %>%
+  mutate(
+    Category = case_when(
+      # Playoff Teams
+      (Year == "2021-22" & Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN")) ~ "Playoff",
+      (Year == "2022-23" & Team %in% c("MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW")) ~ "Playoff",
+      (Year == "2023-24" & Team %in% c("BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO")) ~ "Playoff",
+      # Play-In Teams
+      (Year == "2021-22" & Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS")) ~ "Play-In",
+      (Year == "2022-23" & Team %in% c("ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP")) ~ "Play-In",
+      (Year == "2023-24" & Team %in% c("PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW")) ~ "Play-In",
+      # Non-Playoff Teams
+      TRUE ~ "Non-Playoff"
+    )
+  )
+
+# Split the data into Playoff, Play-In, and Non-Playoff datasets
+playoff_data <- all_data %>% filter(Category == "Playoff")
+playin_data <- all_data %>% filter(Category == "Play-In")
+non_playoff_data <- all_data %>% filter(Category == "Non-Playoff")
+
+# Save datasets (optional)
+write.csv(playoff_data, "playoff_data.csv", row.names = FALSE)
+write.csv(playin_data, "playin_data.csv", row.names = FALSE)
+write.csv(non_playoff_data, "non_playoff_data.csv", row.names = FALSE)
+
+```
+
+### The Null Model
+
+#### Games Started
+
+##### Complete Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_GS_comp_pool_playoff <- lm(GS ~ 1, data = playoff_data) 
+summary(null_GS_comp_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_GS_comp_pool_playin <- lm(GS ~ 1, data = playin_data) 
+summary(null_GS_comp_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_GS_comp_pool_nonplayoff <- lm(GS ~ 1, data = non_playoff_data) 
+summary(null_GS_comp_pool_nonplayoff)
+```
+
+##### No Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_GS_no_pool_playoff <- playoff_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_gs = mean(GS, na.rm = TRUE),     
+    std_err = sd(GS, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_gs / (sd(GS, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_gs / (sd(GS, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_GS_no_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_GS_no_pool_playin <- playin_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_gs = mean(GS, na.rm = TRUE),     
+    std_err = sd(GS, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_gs / (sd(GS, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_gs / (sd(GS, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_GS_no_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_GS_no_pool_nonplayoff <- non_playoff_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_gs = mean(GS, na.rm = TRUE),     
+    std_err = sd(GS, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_gs / (sd(GS, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_gs / (sd(GS, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_GS_no_pool_nonplayoff)
+```
+
+##### Partial Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE, message = FALSE}
+# Partial pooling null model with random intercepts for positions
+null_GS_part_pool_playoff <- lmer(GS ~ 1 + (1 | Position), data = playoff_data) 
+summary(null_GS_part_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions
+null_GS_part_pool_playin <- lmer(GS ~ 1 + (1 | Position), data = playin_data) 
+summary(null_GS_part_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE, message = FALSE}
+# Partial pooling null model with random intercepts for positions
+null_GS_part_pool_nonplayoff <- lmer(GS ~ 1 + (1 | Position), data = non_playoff_data) 
+summary(null_GS_part_pool_nonplayoff)
+```
+
+#### Points Per Game
+
+##### Complete Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model
+null_PPG_comp_pool_playoff <- lm(PPG ~ 1, data = playoff_data)
+summary(null_PPG_comp_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model
+null_PPG_comp_pool_playin <- lm(PPG ~ 1, data = playin_data)
+summary(null_PPG_comp_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model
+null_PPG_comp_pool_nonplayoff <- lm(PPG ~ 1, data = non_playoff_data)
+summary(null_PPG_comp_pool_nonplayoff)
+```
+
+##### No Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position
+null_PPG_no_pool_playoff <- playoff_data %>%
+  group_by(Position) %>%
+  summarise(
+    mean_ppg = mean(PPG, na.rm = TRUE),
+    std_err = sd(PPG, na.rm = TRUE) / sqrt(n()), # Standard Error
+    t_value = mean_ppg / (sd(PPG, na.rm = TRUE) / sqrt(n())), # T-value
+    p_value = 2 * pt(-abs(mean_ppg / (sd(PPG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value
+    )
+
+# View position-specific means
+print(null_PPG_no_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position
+null_PPG_no_pool_playin <- playin_data %>%
+  group_by(Position) %>%
+  summarise(
+    mean_ppg = mean(PPG, na.rm = TRUE),
+    std_err = sd(PPG, na.rm = TRUE) / sqrt(n()), # Standard Error
+    t_value = mean_ppg / (sd(PPG, na.rm = TRUE) / sqrt(n())), # T-value
+    p_value = 2 * pt(-abs(mean_ppg / (sd(PPG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value
+    )
+
+# View position-specific means
+print(null_PPG_no_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position
+null_PPG_no_pool_nonplayoff <- non_playoff_data %>%
+  group_by(Position) %>%
+  summarise(
+    mean_ppg = mean(PPG, na.rm = TRUE),
+    std_err = sd(PPG, na.rm = TRUE) / sqrt(n()), # Standard Error
+    t_value = mean_ppg / (sd(PPG, na.rm = TRUE) / sqrt(n())), # T-value
+    p_value = 2 * pt(-abs(mean_ppg / (sd(PPG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value
+    )
+
+# View position-specific means
+print(null_PPG_no_pool_nonplayoff)
+```
+
+##### Partial Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions
+null_PPG_part_pool_playoff <- lmer(PPG ~ 1 + (1 | Position), data = playoff_data)
+summary(null_PPG_part_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions
+null_PPG_part_pool_playin <- lmer(PPG ~ 1 + (1 | Position), data = playin_data)
+summary(null_PPG_part_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions
+null_PPG_part_pool_nonplayoff <- lmer(PPG ~ 1 + (1 | Position), data = non_playoff_data)
+summary(null_PPG_part_pool_nonplayoff)
+```
+
+#### Rebounds Per Game
+
+##### Complete Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_RPG_comp_pool_playoff <- lm(RPG ~ 1, data = playoff_data) 
+summary(null_RPG_comp_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_RPG_comp_pool_playin <- lm(RPG ~ 1, data = playin_data) 
+summary(null_RPG_comp_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_RPG_comp_pool_nonplayoff <- lm(RPG ~ 1, data = non_playoff_data) 
+summary(null_RPG_comp_pool_nonplayoff)
+```
+
+##### No Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_RPG_no_pool_playoff <- playoff_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_rpg = mean(RPG, na.rm = TRUE),     
+    std_err = sd(RPG, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_rpg / (sd(RPG, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_rpg / (sd(RPG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_RPG_no_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_RPG_no_pool_playin <- playin_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_rpg = mean(RPG, na.rm = TRUE),     
+    std_err = sd(RPG, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_rpg / (sd(RPG, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_rpg / (sd(RPG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_RPG_no_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_RPG_no_pool_nonplayoff <- non_playoff_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_rpg = mean(RPG, na.rm = TRUE),     
+    std_err = sd(RPG, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_rpg / (sd(RPG, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_rpg / (sd(RPG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_RPG_no_pool_nonplayoff)
+```
+
+##### Partial Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions 
+null_RPG_part_pool_playoff <- lmer(RPG ~ 1 + (1 | Position), data = playoff_data) 
+summary(null_RPG_part_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions 
+null_RPG_part_pool_playin <- lmer(RPG ~ 1 + (1 | Position), data = playin_data) 
+summary(null_RPG_part_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions 
+null_RPG_part_pool_nonplayoff <- lmer(RPG ~ 1 + (1 | Position), data = non_playoff_data) 
+summary(null_RPG_part_pool_nonplayoff)
+```
+
+#### Assists Per Game
+
+##### Complete Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_APG_comp_pool_playoff <- lm(APG ~ 1, data = playoff_data) 
+summary(null_APG_comp_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_APG_comp_pool_playin <- lm(APG ~ 1, data = playin_data) 
+summary(null_APG_comp_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Complete pooling null model 
+null_APG_comp_pool_nonplayoff <- lm(APG ~ 1, data = non_playoff_data) 
+summary(null_APG_comp_pool_nonplayoff)
+```
+
+##### No Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_APG_no_pool_playoff <- playoff_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_apg = mean(APG, na.rm = TRUE),     
+    std_err = sd(APG, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_apg / (sd(APG, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_apg / (sd(APG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_APG_no_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_APG_no_pool_playin <- playin_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_apg = mean(APG, na.rm = TRUE),     
+    std_err = sd(APG, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_apg / (sd(APG, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_apg / (sd(APG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_APG_no_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# No pooling null model grouped by position 
+null_APG_no_pool_nonplayoff <- non_playoff_data %>%   
+  group_by(Position) %>%   
+  summarise(     
+    mean_apg = mean(APG, na.rm = TRUE),     
+    std_err = sd(APG, na.rm = TRUE) / sqrt(n()), # Standard Error     
+    t_value = mean_apg / (sd(APG, na.rm = TRUE) / sqrt(n())), # T-value     
+    p_value = 2 * pt(-abs(mean_apg / (sd(APG, na.rm = TRUE) / sqrt(n()))), df = n() - 1) # Two-tailed p-value     
+    )  # View position-specific means 
+print(null_APG_no_pool_nonplayoff)
+```
+
+##### Partial Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions 
+null_APG_part_pool_playoff <- lmer(APG ~ 1 + (1 | Position), data = playoff_data) 
+summary(null_APG_part_pool_playoff)
+```
+
+Play-In Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions 
+null_APG_part_pool_playin <- lmer(APG ~ 1 + (1 | Position), data = playin_data) 
+summary(null_APG_part_pool_playin)
+```
+
+Non-Playoff Teams
+
+```{r, echo = FALSE}
+# Partial pooling null model with random intercepts for positions 
+null_APG_part_pool_nonplayoff <- lmer(APG ~ 1 + (1 | Position), data = non_playoff_data) 
+summary(null_APG_part_pool_nonplayoff)
+```
+
+### The Linear Model
+
+```{r, echo = FALSE}
+# Assign probabilities based on team categories
+nba_data <- all_data %>%
+  mutate(
+    Playoff_Prob = case_when(
+      Team %in% c("MIA", "BOS", "MIL", "PHI", "TOR", "CHI", "PHO", "MEM", "GSW", "DAL", "UTA", "DEN", # 2021-22
+                  "MIL", "BOS", "PHI", "CLE", "NYK", "BKN", "DEN", "MEM", "SAC", "PHO", "LAC", "GSW", # 2022-23
+                  "BOS", "NYK", "MIL", "CLE", "ORL", "IND", "OKC", "DEN", "MIN", "LAC", "DAL", "PHO") ~ 1, # 2023-24
+      Team %in% c("BKN", "ATL", "CLE", "CHA", "MIN", "NOP", "LAC", "SAS",  # 2021-22
+                  "ATL", "MIA", "CHI", "TOR", "LAL", "MIN", "OKC", "NOP",  # 2022-23
+                  "PHI", "MIA", "CHI", "ATL", "LAL", "NOP", "SAC", "GSW") ~ 0.5, # 2023-24
+      TRUE ~ 0 # Non-Playoff teams
+    )
+  )
+```
+
+##### Complete Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE, warning = FALSE}
+# Logistic regression with complete pooling
+log_comp <- glm(Playoff_Prob ~ GS + PPG + RPG + APG, data = nba_data, family = binomial)
+summary(log_comp)
+```
+
+##### No Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE, warning = FALSE}
+# Fit separate logistic regression models for each position and summarize key statistics
+log_no_pool <- nba_data %>%
+  group_by(Position) %>%
+  summarise(
+    Intercept = coef(glm(Playoff_Prob ~ GS + PPG + RPG + APG, 
+                         data = cur_data(), 
+                         family = binomial, 
+                         weights = rep(1, nrow(cur_data()))))[1],
+    GS_coef = coef(glm(Playoff_Prob ~ GS + PPG + RPG + APG, 
+                       data = cur_data(), 
+                       family = binomial, 
+                       weights = rep(1, nrow(cur_data()))))[2],
+    PPG_coef = coef(glm(Playoff_Prob ~ GS + PPG + RPG + APG, 
+                        data = cur_data(), 
+                        family = binomial, 
+                        weights = rep(1, nrow(cur_data()))))[3],
+    RPG_coef = coef(glm(Playoff_Prob ~ GS + PPG + RPG + APG, 
+                        data = cur_data(), 
+                        family = binomial, 
+                        weights = rep(1, nrow(cur_data()))))[4],
+    APG_coef = coef(glm(Playoff_Prob ~ GS + PPG + RPG + APG, 
+                        data = cur_data(), 
+                        family = binomial, 
+                        weights = rep(1, nrow(cur_data()))))[5]
+  )
+
+# View the summarized results
+print(log_no_pool)
+
+```
+
+##### Partial Pooling
+
+Playoff Teams
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+log_part_pool <- glmer(Playoff_Prob ~ GS + PPG + RPG + APG + (1 | Position), data = nba_data, family = binomial)
+summary(log_part_pool)
+```
+
+### The Multilinear Model
+
+##### Complete Pooling
+
+```{r, echo = FALSE}
+# Complete pooling multilinear model
+multilinear_complete <- lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = nba_data)
+summary(multilinear_complete)
+```
+
+##### No Pooling
+
+```{r, echo = FALSE, warning = FALSE}
+# No pooling: Summarize one row per position
+multilinear_no_pooling <- nba_data %>%
+  group_by(Position) %>%
+  summarise(
+    Intercept = coef(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))[1],
+    GS_coef = coef(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))[2],
+    PPG_coef = coef(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))[3],
+    RPG_coef = coef(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))[4],
+    APG_coef = coef(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))[5],
+    PPG_RPG_coef = coef(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))[6],
+    R_squared = summary(lm(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG, data = cur_data()))$r.squared
+  )
+
+# View the results
+print(multilinear_no_pooling)
+```
+
+##### Partial Pooling
+
+```{r, echo = FALSE, message = FALSE}
+# Partial pooling: Mixed-effects model with random intercepts for Position
+multilinear_partial <- lmer(Playoff_Prob ~ GS + PPG + RPG + APG + PPG:RPG + (1 | Position), data = nba_data)
+summary(multilinear_partial)
+```
+
 ## Conclusion
+
+Now, since we created and took a look at all these different models, we can analyze our results to reach our "magic" number of 43 wins.
+
+From the null model, we were able to determine the overall average GS, PPG, RPG, and APG of players and the average of players based on their position in the NBA. With the p-value being statistically significant, we were able to use weighted average calculations to determine the average threshold players needs to create a successful playoff team.
+
+Since only 50% of play-in teams make it to the playoffs, we said half of their performance contributes to the playoff picture; therefore, using this formula:
+
+**Weighted Statistic for Playoffs = (Playoff Statistic) + 0.5 \* (Play-In Statistic - Playoff Statistic)**
+
+We will be using the No Pooling Null Model to determine the average for each position and will be testing both Linear and Multilinear Model in order to calculate the chances the average playoff qualifying player had to make the playoffs.
+
+### Center
+
+#### Null Model
+
+-   Games Played: 65.88
+
+-   Points Per Game: 15.47
+
+-   Rebounds Per Game: 9.60
+
+-   Assists Per Game: 2.75
+
+#### Linear Model
+
+With this model, the team with this center will have a 79.1% chance to make the playoffs.
+
+#### Multilinear Model
+
+With this model, the team with this center will have a 68.0% chance to make the playoffs.
+
+### Power Forward
+
+#### Null Model
+
+-   Games Played: 59.44
+
+-   Points Per Game: 16.41
+
+-   Rebounds Per Game: 6.48
+
+-   Assists Per Game: 3.34
+
+#### Linear Model
+
+With this model, the team with this center will have a 82.5% chance to make the playoffs.
+
+#### Multilinear Model
+
+With this model, the team with this power forward will have a 68.0% chance to make the playoffs.
+
+### Small Forward
+
+#### Null Model
+
+-   Games Played: 60.49
+
+-   Points Per Game: 17.56
+
+-   Rebounds Per Game: 5.161
+
+-   Assists Per Game: 2.96
+
+#### Linear Model
+
+With this model, the team with this center will have a 79.8% chance to make the playoffs.
+
+#### Multilinear Model
+
+With this model, the team with this power forward will have a 68.3% chance to make the playoffs.
+
+### Point Guard
+
+#### Null Model
+
+-   Games Played: 64.81
+
+-   Points Per Game: 20.0
+
+-   Rebounds Per Game: 4.29
+
+-   Assists Per Game: 6.56
+
+#### Linear Model
+
+With this model, the team with this center will have a 81.8% chance to make the playoffs.
+
+#### Multilinear Model
+
+With this model, the team with this center will have a 69.0% chance to make the playoffs.
+
+### Shooting Guard
+
+#### Null Model
+
+-   Games Played: 59.33
+
+-   Points Per Game: 17.07
+
+-   Rebounds Per Game: 4.47
+
+-   Assists Per Game: 4.84
+
+#### Linear Model
+
+With this model, the team with this center will have a 80.3% chance to make the playoffs.
+
+#### Multilinear Model
+
+With this model, the team with this center will have a 67.4% chance to make the playoffs.
+
+### Error Analysis
+
+We can see that there is a huge difference in playoff percentage between the linear and multilinear model, even with the same statistics. Let's dive into why this might be the case.
+
+When viewing the p-values of the linear model, we can see that all predictors except for GS were statistically insignificant whereas in the multilinear model, all predictors except APG were statistically significant; therefore, it will be better to accept the multilinear model over the linear model. Although, there were a lot of large p-values, we still decided to run the tests to see whether or not the percentages were something out of the ordinary or if they made sense.
 
 ## References
 
