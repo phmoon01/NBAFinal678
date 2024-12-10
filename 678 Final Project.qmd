@@ -2217,6 +2217,10 @@ With this model, the team with this center will have a 80.3% chance to make the 
 
 With this model, the team with this center will have a 67.4% chance to make the playoffs.
 
+### Statement
+
+With this, I believe that scouts will be able to see NBA prospects in a different way. To use sheer numbers in order to draft and trade players. I think that with the right combination of players with the right numbers, even the worst NBA teams can make the playoffs.
+
 ### Error Analysis
 
 We can see that there is a huge difference in playoff percentage between the linear and multilinear model, even with the same statistics. Let's dive into why this might be the case.
